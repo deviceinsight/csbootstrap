@@ -82,6 +82,12 @@ def main():
     parser = argparse.ArgumentParser(
         description='Get a certificate for a device.')
 
+    parser.add_argument('action', action='store', default='bootstrap',
+                        choices=['bootstrap', 'renew'],
+                        help='Whether to bootstrap a new certificate or renew an existing one.'
+                        ' Renewing an existing certificate requires a valid key and certificate'
+                        " to exist in the 'path'.")
+
     parser.add_argument('--bootstrap-info', dest='bootstrap_info', action='store', default='-',
                         help="Path to the bootstrap.json file or for '-' stdin.")
 
