@@ -88,10 +88,10 @@ def main():
                         ' Renewing an existing certificate requires a valid key and certificate'
                         " to exist in the 'path'.")
 
-    parser.add_argument('--bootstrap-info', dest='bootstrap_info', action='store', default='-',
+    parser.add_argument('-bi', '--bootstrap-info', dest='bootstrap_info', action='store', default='-',
                         help="Path to the bootstrap.json file or for '-' stdin.")
 
-    parser.add_argument('--path', dest='path', action='store', default='.',
+    parser.add_argument('-p', '--path', dest='path', action='store', default='.',
                         help='Path to save the generated files (key, CSR, certificate) to'
                         ' and where the key file is expected on renewal.')
 
