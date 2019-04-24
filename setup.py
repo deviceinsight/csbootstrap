@@ -6,7 +6,7 @@ setup(
     packages=['csbootstrap'],
     entry_points={
         'console_scripts': [
-            'csbootstrap=csbootstrap.get_certificate:main'
+            'csbootstrap=csbootstrap.__main__:main'
         ]
     },
     install_requires=[

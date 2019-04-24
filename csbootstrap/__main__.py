@@ -9,7 +9,12 @@ import sys
 from OpenSSL import crypto, SSL
 from collections import namedtuple
 
-BootstrapInfo = namedtuple('BootstrapInfo', 'token url urn')
+BootstrapInfo = namedtuple(
+    'BootstrapInfo', 'token bootstrap_url renewal_url urn')
+
+KEY_FILE_NAME = 'client-key.pem'
+CERT_FILE_NAME = 'client-cert.pem'
+CSR_FILE_NAME = 'client-csr.pem'
 
 
 def generate_key():
@@ -18,21 +23,25 @@ def generate_key():
     return key
 
 
-def generate_csr(common_name):
+def generate_csr(common_name, key):
     req = crypto.X509Req()
     req.get_subject().CN = common_name
 
-    key = generate_key()
     req.set_pubkey(key)
     req.sign(key, 'sha256')
 
-    return (req, key)
+    return req
 
 
 def write_key(path, key):
     with open(path, 'wb') as f:
         f.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
         print('Created ' + path)
+
+
+def read_key(path):
+    with open(path, 'rb') as f:
+        return crypto.load_privatekey(crypto.FILETYPE_PEM, f.read())
 
 
 def write_csr(path, req):
@@ -57,18 +66,31 @@ def load_bootstrap_info(path):
 
     token = bootstrap_info['bootstrapToken']
     bootstrap_url = bootstrap_info['bootstrapUrl']
+    renewal_url = bootstrap_info['renewalUrl']
     gateway_urn = bootstrap_info['gatewayUrn']
-    return BootstrapInfo(token=token, url=bootstrap_url, urn=gateway_urn)
+    return BootstrapInfo(token=token, bootstrap_url=bootstrap_url, renewal_url=renewal_url,
+                         urn=gateway_urn)
 
 
-def request_certificate(csr, bootstrap_info):
+def request_certificate(csr, bootstrap_info, path, renew=False):
     csr_bytes = crypto.dump_certificate_request(crypto.FILETYPE_ASN1, csr)
     csr_b64 = base64.encodebytes(csr_bytes).decode('utf-8').replace('\n', '')
 
-    body = {'csr': csr_b64, 'token': bootstrap_info.token}
+    body = {'csr': csr_b64}
+    if not renew:
+        body['token'] = bootstrap_info.token
+
     print(body)
 
-    r = requests.post(bootstrap_info.url, json=body)
+    url = bootstrap_info.renewal_url if renew else bootstrap_info.bootstrap_url
+    if renew:
+        client_key = path + '/' + KEY_FILE_NAME
+        client_cert = path + '/' + CERT_FILE_NAME
+        r = requests.post(url, json=body, cert=(
+            client_cert, client_key), verify=False)
+    else:
+        r = requests.post(url, json=body)
+
     r.raise_for_status()
 
     certificate_b64 = r.json()['certificate']
@@ -76,6 +98,22 @@ def request_certificate(csr, bootstrap_info):
     certificate = crypto.load_certificate(
         crypto.FILETYPE_ASN1, certificate_bytes)
     return certificate
+
+
+def bootstrap(bootstrap_info, path):
+    key = generate_key()
+    csr = generate_csr(bootstrap_info.urn, key)
+    write_key(path + '/' + KEY_FILE_NAME, key)
+    write_csr(path + '/' + CSR_FILE_NAME, csr)
+    cert = request_certificate(csr, bootstrap_info, path)
+    write_cert(path + '/' + CERT_FILE_NAME, cert)
+
+
+def renew(bootstrap_info, path):
+    key = read_key(path + '/' + KEY_FILE_NAME)
+    csr = generate_csr(bootstrap_info.urn, key)
+    write_csr(path + '/' + CSR_FILE_NAME, csr)
+    request_certificate(csr, bootstrap_info, path, renew=True)
 
 
 def main():
@@ -88,7 +126,7 @@ def main():
                         ' Renewing an existing certificate requires a valid key and certificate'
                         " to exist in the 'path'.")
 
-    parser.add_argument('-bi', '--bootstrap-info', dest='bootstrap_info', action='store', default='-',
+    parser.add_argument('-b', '--bootstrap-info', dest='bootstrap_info', action='store', default='-',
                         help="Path to the bootstrap.json file or for '-' stdin.")
 
     parser.add_argument('-p', '--path', dest='path', action='store', default='.',
@@ -98,8 +136,11 @@ def main():
     args = parser.parse_args()
 
     bootstrap_info = load_bootstrap_info(args.bootstrap_info)
-    (csr, key) = generate_csr(bootstrap_info.urn)
-    write_key(args.path + '/client-key.pem', key)
-    write_csr(args.path + '/client-csr.pem', csr)
-    cert = request_certificate(csr, bootstrap_info)
-    write_cert(args.path + '/client-cert.pem', cert)
+    if args.action == 'bootstrap':
+        bootstrap(bootstrap_info, args.path)
+    else:
+        renew(bootstrap_info, args.path)
+
+
+if __name__ == "__main__":
+    main()
