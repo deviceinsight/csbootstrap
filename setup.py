@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name='csbootstrap',
-    version='1.0.0',
+    version='1.1.0a1',
     packages=['csbootstrap'],
     entry_points={
         'console_scripts': [
-            'csbootstrap=csbootstrap.get_certificate:main'
+            'csbootstrap=csbootstrap.__main__:main'
         ]
     },
     install_requires=[

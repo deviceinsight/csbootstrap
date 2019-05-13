@@ -16,6 +16,8 @@ curl -X POST "https://$SUBDOMAIN.centersightcloud.com/api/beta/gateways/urn/$URN
 
 Where `URN` is the URN of your device and `SUBDOMAIN` is the subdomain of your organization.
 
+A new certificate can be requested by using the `renew` command.
+
 To get an overview of all options run `csbootstrap -h`.
 
 ## Development
