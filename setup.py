@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='csbootstrap',
-    version='1.1.0a1',
+    version='1.1.0',
     packages=['csbootstrap'],
     entry_points={
         'console_scripts': [
