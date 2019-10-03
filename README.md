@@ -19,12 +19,3 @@ Where `URN` is the URN of your device and `SUBDOMAIN` is the subdomain of your o
 A new certificate can be requested by using the `renew` command.
 
 To get an overview of all options run `csbootstrap -h`.
-
-## Development
-
-This repository requires Python 3. Dependencies can be installed using
-`pip`:
-
-```
-pip install -r requirements.txt --user
-```
